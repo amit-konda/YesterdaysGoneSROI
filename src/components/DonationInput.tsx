@@ -19,16 +19,19 @@ const QUICK_AMOUNTS = [50, 100, 250, 500, 1000];
 export function DonationInput({
   value,
   onChange,
-  min = 10,
+  min = 0,
   max = 10000,
   step = 10,
 }: DonationInputProps) {
   const [localValue, setLocalValue] = useState(String(value));
+  const [isFocused, setIsFocused] = useState(false);
 
-  // Sync local value when prop changes
+  // Sync local value when prop changes (but not while user is typing)
   useEffect(() => {
-    setLocalValue(String(value));
-  }, [value]);
+    if (!isFocused) {
+      setLocalValue(String(value));
+    }
+  }, [value, isFocused]);
 
   const clamp = (val: number) => Math.max(min, Math.min(max, val));
 
@@ -36,9 +39,39 @@ export function DonationInput({
     const raw = e.target.value;
     setLocalValue(raw);
 
+    // Only update parent if it's a valid number, but don't round while typing
     const parsed = parseFloat(raw);
+    if (!isNaN(parsed) && raw !== '' && raw !== '-') {
+      // Allow any value while typing, just clamp it
+      const clamped = clamp(parsed);
+      onChange(clamped);
+    } else if (raw === '' || raw === '-') {
+      // Allow empty or minus sign while typing
+      // Don't update parent yet
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    const parsed = parseFloat(localValue);
     if (!isNaN(parsed)) {
-      onChange(clamp(Math.round(parsed / step) * step));
+      // Just clamp to min/max, no rounding
+      const clamped = clamp(parsed);
+      setLocalValue(String(clamped));
+      onChange(clamped);
+    } else {
+      // If invalid, reset to current value
+      setLocalValue(String(value));
+    }
+  };
+
+  const handleFocus = () => {
+    setIsFocused(true);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.currentTarget.blur();
     }
   };
 
@@ -52,19 +85,19 @@ export function DonationInput({
   };
 
   return (
-    <Card className="border-primary/20">
-      <CardContent className="pt-6">
-        <div className="space-y-6">
+    <Card className="glass shadow-xl">
+      <CardContent className="pt-8 pb-8">
+        <div className="space-y-8">
           {/* Number Input */}
           <div>
             <label
               htmlFor="donation-amount"
-              className="block text-sm font-medium mb-2 text-foreground"
+              className="block text-base font-semibold mb-4 text-foreground uppercase tracking-wide"
             >
               Your donation amount
             </label>
             <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-6 w-6 text-primary z-10" />
               <Input
                 id="donation-amount"
                 type="number"
@@ -73,7 +106,10 @@ export function DonationInput({
                 step={step}
                 value={localValue}
                 onChange={handleNumberChange}
-                className="pl-10 text-lg font-semibold"
+                onBlur={handleBlur}
+                onFocus={handleFocus}
+                onKeyDown={handleKeyDown}
+                className="pl-12 text-3xl font-bold h-20 border-2 bg-background/50 backdrop-blur-sm text-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
                 aria-describedby="donation-range"
               />
             </div>
@@ -89,10 +125,13 @@ export function DonationInput({
               step={step}
               value={value}
               onChange={handleSliderChange}
-              className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+              className="w-full h-3 bg-secondary rounded-full appearance-none cursor-pointer accent-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all"
+              style={{
+                background: `linear-gradient(to right, hsl(var(--primary)) 0%, hsl(var(--primary)) ${((value - min) / (max - min)) * 100}%, hsl(var(--secondary)) ${((value - min) / (max - min)) * 100}%, hsl(var(--secondary)) 100%)`
+              }}
               aria-label="Donation amount slider"
             />
-            <div className="flex justify-between text-xs text-muted-foreground mt-1">
+            <div className="flex justify-between text-sm text-muted-foreground mt-2 font-medium">
               <span>{formatCurrency(min)}</span>
               <span>{formatCurrency(max)}</span>
             </div>
@@ -100,10 +139,10 @@ export function DonationInput({
 
           {/* Quick Amount Chips */}
           <div>
-            <p className="text-sm font-medium mb-2 text-muted-foreground">
+            <p className="text-base font-semibold mb-4 text-muted-foreground uppercase tracking-wide">
               Quick amounts
             </p>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-3">
               {QUICK_AMOUNTS.map((amount) => (
                 <Button
                   key={amount}
@@ -111,8 +150,10 @@ export function DonationInput({
                   size="sm"
                   onClick={() => handleQuickAmount(amount)}
                   className={cn(
-                    'transition-all',
-                    value === amount && 'ring-2 ring-ring ring-offset-2'
+                    'transition-all duration-200 font-semibold',
+                    value === amount 
+                      ? 'ring-2 ring-primary ring-offset-2 shadow-md scale-105' 
+                      : 'hover:scale-105 hover:shadow-sm'
                   )}
                 >
                   {formatCurrency(amount)}

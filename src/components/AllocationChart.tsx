@@ -32,10 +32,10 @@ export function AllocationChart({ donation }: AllocationChartProps) {
     if (active && payload && payload.length) {
       const item = payload[0];
       return (
-        <div className="rounded-lg bg-popover p-3 shadow-lg border text-sm">
-          <p className="font-medium text-popover-foreground">{item.name}</p>
-          <p className="text-primary font-semibold">{formatCurrency(item.value)}</p>
-          <p className="text-muted-foreground text-xs">
+        <div className="rounded-xl glass p-4 shadow-xl text-base">
+          <p className="font-semibold text-foreground mb-1.5">{item.name}</p>
+          <p className="text-primary font-bold text-xl">{formatCurrency(item.value)}</p>
+          <p className="text-muted-foreground text-sm mt-1.5">
             {(item.payload.percentage * 100).toFixed(0)}% of donation
           </p>
         </div>
@@ -47,14 +47,14 @@ export function AllocationChart({ donation }: AllocationChartProps) {
   const renderLegend = (props: any) => {
     const { payload } = props;
     return (
-      <ul className="grid grid-cols-2 gap-2 text-xs">
+      <ul className="grid grid-cols-2 gap-4 text-sm">
         {payload.map((entry: any, index: number) => (
-          <li key={`legend-${index}`} className="flex items-center gap-2">
+          <li key={`legend-${index}`} className="flex items-center gap-3">
             <span
-              className="h-3 w-3 rounded-sm flex-shrink-0"
+              className="h-5 w-5 rounded-md flex-shrink-0 shadow-sm"
               style={{ backgroundColor: entry.color }}
             />
-            <span className="text-muted-foreground truncate">{entry.value}</span>
+            <span className="text-foreground truncate font-medium">{entry.value}</span>
           </li>
         ))}
       </ul>
@@ -62,24 +62,24 @@ export function AllocationChart({ donation }: AllocationChartProps) {
   };
 
   return (
-    <Card>
+    <Card className="overflow-hidden glass">
       <CardHeader>
-        <CardTitle className="text-lg">How Your Donation Is Used</CardTitle>
-        <CardDescription>
+        <CardTitle className="text-2xl font-bold text-foreground">How Your Donation Is Used</CardTitle>
+        <CardDescription className="text-lg text-foreground/75">
           Typical program cost allocation (illustrative)
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="h-64">
+        <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={data}
                 cx="50%"
                 cy="50%"
-                innerRadius={60}
-                outerRadius={80}
-                paddingAngle={2}
+                innerRadius={70}
+                outerRadius={95}
+                paddingAngle={3}
                 dataKey="value"
                 label={false}
               >
@@ -87,6 +87,7 @@ export function AllocationChart({ donation }: AllocationChartProps) {
                   <Cell
                     key={`cell-${index}`}
                     fill={CHART_COLORS[index % CHART_COLORS.length]}
+                    style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))' }}
                   />
                 ))}
               </Pie>
@@ -94,7 +95,7 @@ export function AllocationChart({ donation }: AllocationChartProps) {
               <Legend
                 content={renderLegend}
                 verticalAlign="bottom"
-                height={60}
+                height={70}
               />
             </PieChart>
           </ResponsiveContainer>

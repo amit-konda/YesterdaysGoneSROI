@@ -46,24 +46,20 @@ export function calculateSocialValueGenerated(donation: number): number {
 /**
  * Calculate SROI ratio (raw and adjusted)
  * 
- * Formula:
- * - Raw SROI: social value generated / donation
- * - Adjusted SROI: raw SROI × multiplicative multiplier
+ * Uses fixed SROI values from assumptions, regardless of donation amount.
+ * This ensures consistent SROI ratios even at $0 donations.
  * 
- * @param donation - Donation amount in USD
+ * @param _donation - Donation amount in USD (unused, kept for API compatibility)
  * @returns Object with raw and adjusted SROI ratios
  */
-export function calculateSROIRatio(donation: number): {
+export function calculateSROIRatio(_donation: number): {
   raw: number;
   adjusted: number;
 } {
-  const socialValue = calculateSocialValueGenerated(donation);
-  const raw = socialValue / donation;
-  const adjusted = raw * ASSUMPTIONS.multiplicativeMultiplier;
-
+  // Use fixed SROI values from assumptions
   return {
-    raw,
-    adjusted,
+    raw: ASSUMPTIONS.rawSROI,
+    adjusted: ASSUMPTIONS.adjustedSROIMultiplicative,
   };
 }
 
