@@ -26,3 +26,6 @@ dist-ssr
 # Test coverage
 coverage
 
+# Reference documents (keep local, don't commit)
+*.pdf
+

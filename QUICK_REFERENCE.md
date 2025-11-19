@@ -22,7 +22,8 @@ npm run preview      # Preview production build
 
 | File | Purpose |
 |------|---------|
-| `src/lib/assumptions.ts` | ⚠️ **Update all placeholder values here** |
+| `src/lib/assumptions.ts` | **All model assumptions and sources** |
+| `src/lib/calculations.ts` | SROI calculation functions |
 | `src/index.css` | Brand colors (lines 5-7) |
 | `src/App.tsx` | Mission text, story content |
 | `src/components/DonationInput.tsx` | Quick amount chips (line 14) |
@@ -50,21 +51,25 @@ src/
 // Nights off street
 nights = (donation / costPerBedNight) × avgHouseholdSize
 
-// Violence prevented (expected value)
-incidents = (donation / costPerBedNight) × (1/7) × 0.002 × avgHouseholdSize
+// Social value generated
+socialValue = nights × socialValuePerPersonNight
 
-// Future earnings (lifetime PV)
-earnings = (nights / 30) × lifetimePVPerStabilizedMonth
+// SROI ratio
+rawSROI = socialValue / donation
+adjustedSROI = rawSROI × multiplicativeMultiplier
 ```
 
-## Default Values (PLACEHOLDERS!)
+## Key Values (Based on Safe Nights SROI Analysis 2024)
 
-- Cost per bed-night: **$65**
-- Avg household size: **1.6**
-- Risk reduction per week: **0.002**
-- Lifetime PV per month: **$350**
-
-⚠️ **These are estimates. Update with real program data!**
+- Cost per person-night: **$32.85**
+- Cost per household-night: **$76.71**
+- Avg household size: **2.33**
+- Social value per person-night: **$72.64**
+- Social value per household-night: **$169.50**
+- Raw SROI: **2.21x**
+- Adjusted SROI (multiplicative): **1.26x**
+- Operating budget (2024): **$252,000**
+- Shelter capacity: **9 women + 12 children (21 total)**
 
 ## Donation Range
 

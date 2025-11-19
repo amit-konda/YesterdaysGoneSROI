@@ -1,17 +1,21 @@
 /**
  * SROI impact calculations for Yesterday's Gone
  * 
+ * Based on Safe Nights SROI Analysis (2024)
+ * Balanced calculation scenario: Women Mix 50/50 + Kids Moderate
+ * 
  * All functions are deterministic and use linear models for transparency.
- * These are conservative placeholder calculations that should be validated
- * and refined with actual program data.
  */
 
 import { ASSUMPTIONS } from './assumptions';
 
 export interface ImpactMetrics {
   nightsOffStreet: number;
-  violencePrevented: number;
-  futureEarnings: number;
+  socialValueGenerated: number;
+  sroiRatio: {
+    raw: number;
+    adjusted: number;
+  };
 }
 
 /**
@@ -27,61 +31,53 @@ export function calculateNightsOffStreet(donation: number): number {
 }
 
 /**
- * Calculate expected instances of violence prevented
+ * Calculate social value generated from donation
  * 
- * Model:
- * 1. Convert donation to participant-weeks of stability
- * 2. Apply baseline risk reduction rate
- * 3. Multiply by household size
- * 
- * ⚠️ This is an expected-value estimate, not a causal claim.
+ * Formula: person-nights × social value per person-night
  * 
  * @param donation - Donation amount in USD
- * @returns Expected incidents avoided (decimal, typically < 1)
+ * @returns Social value generated (USD)
  */
-export function calculateViolencePrevented(donation: number): number {
-  const participantWeeks =
-    (donation / ASSUMPTIONS.costPerBedNight) * ASSUMPTIONS.weeksPerNight;
-  
-  const expectedIncidentsAvoided =
-    participantWeeks *
-    ASSUMPTIONS.baselineRiskReductionPerStabilizedWeek *
-    ASSUMPTIONS.avgHouseholdSize;
-
-  return expectedIncidentsAvoided;
+export function calculateSocialValueGenerated(donation: number): number {
+  const nights = calculateNightsOffStreet(donation);
+  return nights * ASSUMPTIONS.socialValuePerPersonNight;
 }
 
 /**
- * Calculate future earnings added (lifetime present value)
+ * Calculate SROI ratio (raw and adjusted)
  * 
- * Model:
- * 1. Convert nights to stabilized months (30 nights ≈ 1 month)
- * 2. Multiply by lifetime PV per stabilized month
- * 
- * ⚠️ This is a simplified economic mobility model.
+ * Formula:
+ * - Raw SROI: social value generated / donation
+ * - Adjusted SROI: raw SROI × multiplicative multiplier
  * 
  * @param donation - Donation amount in USD
- * @returns Lifetime present value of earnings increase (USD)
+ * @returns Object with raw and adjusted SROI ratios
  */
-export function calculateFutureEarnings(donation: number): number {
-  const nights = calculateNightsOffStreet(donation);
-  const stabilizedMonths = nights / 30;
-  const futureEarningsPV = stabilizedMonths * ASSUMPTIONS.lifetimePVPerStabilizedMonth;
+export function calculateSROIRatio(donation: number): {
+  raw: number;
+  adjusted: number;
+} {
+  const socialValue = calculateSocialValueGenerated(donation);
+  const raw = socialValue / donation;
+  const adjusted = raw * ASSUMPTIONS.multiplicativeMultiplier;
 
-  return futureEarningsPV;
+  return {
+    raw,
+    adjusted,
+  };
 }
 
 /**
  * Calculate all impact metrics at once
  * 
  * @param donation - Donation amount in USD
- * @returns Object with all three impact metrics
+ * @returns Object with all impact metrics
  */
 export function calculateImpact(donation: number): ImpactMetrics {
   return {
     nightsOffStreet: calculateNightsOffStreet(donation),
-    violencePrevented: calculateViolencePrevented(donation),
-    futureEarnings: calculateFutureEarnings(donation),
+    socialValueGenerated: calculateSocialValueGenerated(donation),
+    sroiRatio: calculateSROIRatio(donation),
   };
 }
 
@@ -99,7 +95,7 @@ export interface ContextMetrics {
  */
 export function getContextMetrics(): ContextMetrics {
   return {
-    costPerNight: ASSUMPTIONS.costPerBedNight / ASSUMPTIONS.avgHouseholdSize,
+    costPerNight: ASSUMPTIONS.costPerBedNight,
     counselingSession: ASSUMPTIONS.counselingSessionCost,
     coachingPerWeek: ASSUMPTIONS.coachingCostPerWeek,
   };

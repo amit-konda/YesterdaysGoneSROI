@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   calculateNightsOffStreet,
-  calculateViolencePrevented,
-  calculateFutureEarnings,
+  calculateSocialValueGenerated,
+  calculateSROIRatio,
   calculateImpact,
   getContextMetrics,
 } from './calculations';
@@ -39,72 +39,67 @@ describe('SROI Calculations', () => {
     });
   });
 
-  describe('calculateViolencePrevented', () => {
-    it('should calculate violence prevented for $100 donation', () => {
-      const donation = 100;
-      const participantWeeks =
-        (donation / ASSUMPTIONS.costPerBedNight) * ASSUMPTIONS.weeksPerNight;
-      const expected =
-        participantWeeks *
-        ASSUMPTIONS.baselineRiskReductionPerStabilizedWeek *
-        ASSUMPTIONS.avgHouseholdSize;
-      
-      expect(calculateViolencePrevented(donation)).toBeCloseTo(expected, 4);
-    });
-
-    it('should return a small positive number for typical donations', () => {
-      const donation = 100;
-      const result = calculateViolencePrevented(donation);
-      expect(result).toBeGreaterThan(0);
-      expect(result).toBeLessThan(1); // Expected value should be fractional for typical donations
-    });
-
-    it('should scale linearly with donation amount', () => {
-      const donation1 = 100;
-      const donation2 = 500;
-      const result1 = calculateViolencePrevented(donation1);
-      const result2 = calculateViolencePrevented(donation2);
-      expect(result2).toBeCloseTo(result1 * 5, 4);
-    });
-  });
-
-  describe('calculateFutureEarnings', () => {
-    it('should calculate future earnings for $100 donation', () => {
+  describe('calculateSocialValueGenerated', () => {
+    it('should calculate social value for $100 donation', () => {
       const donation = 100;
       const nights = calculateNightsOffStreet(donation);
-      const stabilizedMonths = nights / 30;
-      const expected = stabilizedMonths * ASSUMPTIONS.lifetimePVPerStabilizedMonth;
+      const expected = nights * ASSUMPTIONS.socialValuePerPersonNight;
       
-      expect(calculateFutureEarnings(donation)).toBeCloseTo(expected, 2);
+      expect(calculateSocialValueGenerated(donation)).toBeCloseTo(expected, 2);
     });
 
-    it('should return positive earnings for any donation', () => {
+    it('should return positive value for any donation', () => {
       const donation = 50;
-      const result = calculateFutureEarnings(donation);
+      const result = calculateSocialValueGenerated(donation);
       expect(result).toBeGreaterThan(0);
     });
 
     it('should scale linearly with donation amount', () => {
       const donation1 = 100;
       const donation2 = 300;
-      const result1 = calculateFutureEarnings(donation1);
-      const result2 = calculateFutureEarnings(donation2);
+      const result1 = calculateSocialValueGenerated(donation1);
+      const result2 = calculateSocialValueGenerated(donation2);
       expect(result2).toBeCloseTo(result1 * 3, 2);
     });
   });
 
+  describe('calculateSROIRatio', () => {
+    it('should calculate SROI ratio for $100 donation', () => {
+      const donation = 100;
+      const result = calculateSROIRatio(donation);
+      
+      expect(result).toHaveProperty('raw');
+      expect(result).toHaveProperty('adjusted');
+      expect(result.raw).toBeGreaterThan(0);
+      expect(result.adjusted).toBeGreaterThan(0);
+      expect(result.adjusted).toBeLessThan(result.raw);
+    });
+
+    it('should return consistent ratios for different amounts', () => {
+      const donation1 = 100;
+      const donation2 = 500;
+      const result1 = calculateSROIRatio(donation1);
+      const result2 = calculateSROIRatio(donation2);
+      
+      // SROI ratios should be similar regardless of donation amount
+      expect(result1.raw).toBeCloseTo(result2.raw, 2);
+      expect(result1.adjusted).toBeCloseTo(result2.adjusted, 2);
+    });
+  });
+
   describe('calculateImpact', () => {
-    it('should return all three metrics for $100 donation', () => {
+    it('should return all metrics for $100 donation', () => {
       const donation = 100;
       const impact = calculateImpact(donation);
 
       expect(impact).toHaveProperty('nightsOffStreet');
-      expect(impact).toHaveProperty('violencePrevented');
-      expect(impact).toHaveProperty('futureEarnings');
+      expect(impact).toHaveProperty('socialValueGenerated');
+      expect(impact).toHaveProperty('sroiRatio');
 
       expect(impact.nightsOffStreet).toBeGreaterThan(0);
-      expect(impact.violencePrevented).toBeGreaterThan(0);
-      expect(impact.futureEarnings).toBeGreaterThan(0);
+      expect(impact.socialValueGenerated).toBeGreaterThan(0);
+      expect(impact.sroiRatio.raw).toBeGreaterThan(0);
+      expect(impact.sroiRatio.adjusted).toBeGreaterThan(0);
     });
 
     it('should match individual calculation functions', () => {
@@ -112,8 +107,9 @@ describe('SROI Calculations', () => {
       const impact = calculateImpact(donation);
 
       expect(impact.nightsOffStreet).toBe(calculateNightsOffStreet(donation));
-      expect(impact.violencePrevented).toBe(calculateViolencePrevented(donation));
-      expect(impact.futureEarnings).toBe(calculateFutureEarnings(donation));
+      expect(impact.socialValueGenerated).toBe(calculateSocialValueGenerated(donation));
+      expect(impact.sroiRatio.raw).toBe(calculateSROIRatio(donation).raw);
+      expect(impact.sroiRatio.adjusted).toBe(calculateSROIRatio(donation).adjusted);
     });
 
     it('should handle edge case of $10 donation', () => {
@@ -122,9 +118,8 @@ describe('SROI Calculations', () => {
 
       expect(impact.nightsOffStreet).toBeGreaterThan(0);
       expect(impact.nightsOffStreet).toBeLessThan(0.5);
-      expect(impact.violencePrevented).toBeGreaterThan(0);
-      expect(impact.violencePrevented).toBeLessThan(0.01);
-      expect(impact.futureEarnings).toBeGreaterThan(0);
+      expect(impact.socialValueGenerated).toBeGreaterThan(0);
+      expect(impact.sroiRatio.adjusted).toBeGreaterThan(0);
     });
 
     it('should handle edge case of $10,000 donation', () => {
@@ -132,8 +127,8 @@ describe('SROI Calculations', () => {
       const impact = calculateImpact(donation);
 
       expect(impact.nightsOffStreet).toBeGreaterThan(100);
-      expect(impact.violencePrevented).toBeGreaterThan(0.1);
-      expect(impact.futureEarnings).toBeGreaterThan(1000);
+      expect(impact.socialValueGenerated).toBeGreaterThan(1000);
+      expect(impact.sroiRatio.adjusted).toBeGreaterThan(0);
     });
   });
 
@@ -179,18 +174,18 @@ describe('SROI Calculations', () => {
       expect(nights).toBeLessThan(30);
     });
 
-    it('$100 donation should show measurable but small violence prevention', () => {
+    it('$100 donation should show meaningful social value', () => {
       const donation = 100;
-      const prevented = calculateViolencePrevented(donation);
-      expect(prevented).toBeGreaterThan(0.001);
-      expect(prevented).toBeLessThan(0.1);
+      const socialValue = calculateSocialValueGenerated(donation);
+      expect(socialValue).toBeGreaterThan(100);
+      expect(socialValue).toBeLessThan(500);
     });
 
-    it('$100 donation should show meaningful future earnings impact', () => {
+    it('$100 donation should show positive SROI ratio', () => {
       const donation = 100;
-      const earnings = calculateFutureEarnings(donation);
-      expect(earnings).toBeGreaterThan(50);
-      expect(earnings).toBeLessThan(200);
+      const sroi = calculateSROIRatio(donation);
+      expect(sroi.raw).toBeGreaterThan(1);
+      expect(sroi.adjusted).toBeGreaterThan(0.5);
     });
   });
 });

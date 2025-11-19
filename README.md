@@ -7,9 +7,9 @@ A clean, modern, mobile-friendly React + Vite application that visualizes the So
 - **Interactive donation calculator** with slider, number input, and quick-select chips
 - **Three live-updating impact metrics:**
   - Nights off the street (women + children)
-  - Instances of violence prevented (expected value)
-  - Future earnings added (lifetime present value)
-- **Transparent assumptions drawer** with clearly documented placeholder values
+  - Social value generated (based on SROI analysis)
+  - SROI ratio (raw and adjusted)
+- **Transparent assumptions drawer** with clearly documented values and sources
 - **Allocation chart** showing how donations fund program costs
 - **Human-centered story section** that translates numbers into plain English
 - **Fully accessible** with proper ARIA labels, focus management, and keyboard navigation
@@ -72,31 +72,18 @@ src/
 └── index.css             # Global styles + Tailwind imports
 ```
 
-## ⚠️ Important: Placeholder Values
+## 📊 SROI Analysis
 
-**All calculations use conservative placeholder values for demonstration purposes.**
+**All calculations are based on the Safe Nights SROI Analysis (2024).**
 
-Before deploying this tool publicly:
+The model uses the balanced calculation scenario:
+- **Women proxy**: Mix 50/50 ($19,200 per woman per year)
+- **Children proxy**: Moderate ($32,000 per child per year)
+- **Social value per person-night**: $72.64
+- **Raw SROI**: 2.21x
+- **Adjusted SROI (multiplicative)**: 1.26x
 
-1. **Schedule a meeting with Yesterday's Gone program staff**
-2. **Replace placeholder values in `src/lib/assumptions.ts` with actual program data**
-3. **Validate violence prevention and economic mobility models with research**
-4. **Document all sources and methodology clearly**
-
-### Where to Update Values
-
-Open `src/lib/assumptions.ts` and update the `ASSUMPTIONS` object:
-
-```typescript
-export const ASSUMPTIONS = {
-  costPerBedNight: 65,         // ← Update with actual cost per person per night
-  avgHouseholdSize: 1.6,       // ← Update with actual avg household size
-  counselingSessionCost: 120,  // ← Update with actual session cost
-  // ... etc
-}
-```
-
-Each value includes extensive documentation explaining its purpose and limitations.
+All assumptions, proxy values, and additionality adjustments are documented in the model assumptions panel, along with source citations.
 
 ## 🧮 SROI Model
 
@@ -108,19 +95,18 @@ nights = (donation / costPerBedNight) × avgHouseholdSize
 ```
 Straightforward cost-per-night calculation multiplied by household size.
 
-### 2. Violence Prevention (Expected Value)
+### 2. Social Value Generated
 ```
-participantWeeks = (donation / costPerBedNight) × weeksPerNight
-expectedIncidents = participantWeeks × baselineRiskReduction × avgHouseholdSize
+socialValue = nights × socialValuePerPersonNight
 ```
-Simplified expected-value model. **Not a causal claim.** Requires validation with longitudinal data.
+Social value based on person-nights × $72.64 per person-night (balanced calculation).
 
-### 3. Future Earnings (Lifetime PV)
+### 3. SROI Ratio
 ```
-stabilizedMonths = (nights / 30)
-futureEarnings = stabilizedMonths × lifetimePVPerStabilizedMonth
+rawSROI = socialValue / donation
+adjustedSROI = rawSROI × multiplicativeMultiplier
 ```
-Simplified economic mobility model. Requires validation with employment outcome data.
+Social Return on Investment ratio, with adjustments for deadweight (25%), attribution (20%), and displacement (5%).
 
 ## 🧪 Testing
 
@@ -173,6 +159,12 @@ The page is optimized for printing on A4 portrait paper:
 - Interactive elements hidden (`.no-print`)
 - Page breaks optimized
 - Links show full URLs
+
+## 📚 Additional Documentation
+
+- **[Quick Reference](./QUICK_REFERENCE.md)** - Essential commands and key values
+- **[Getting Started Guide](./GETTING_STARTED.md)** - Detailed setup and customization instructions
+- **[WordPress Integration](./wordpress-plugin/INSTALLATION.md)** - Elementor widget installation guide
 
 ## 📄 License
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { CHART_COLORS } from '@/lib/colors';
@@ -84,7 +83,7 @@ export function AllocationChart({ donation }: AllocationChartProps) {
                 dataKey="value"
                 label={false}
               >
-                {data.map((entry, index) => (
+                {data.map((_, index) => (
                   <Cell
                     key={`cell-${index}`}
                     fill={CHART_COLORS[index % CHART_COLORS.length]}

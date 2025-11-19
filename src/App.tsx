@@ -1,13 +1,12 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Bed, Shield, TrendingUp, ExternalLink } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Bed, TrendingUp, DollarSign, ExternalLink } from 'lucide-react';
 import { DonationInput } from '@/components/DonationInput';
 import { ImpactCard } from '@/components/ImpactCard';
 import { AllocationChart } from '@/components/AllocationChart';
 import { AssumptionsSheet, AssumptionsTrigger } from '@/components/AssumptionsSheet';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { calculateImpact, getContextMetrics } from '@/lib/calculations';
-import { formatCurrency, formatNumber, formatDecimal } from '@/lib/format';
+import { formatCurrency, formatNumber } from '@/lib/format';
 
 function App() {
   const [donation, setDonation] = useState(100);
@@ -29,14 +28,61 @@ function App() {
 
   const context = useMemo(() => getContextMetrics(), []);
 
+  // Auto-resize iframe height when embedded (for WordPress/Elementor)
+  useEffect(() => {
+    // Only run if we're in an iframe
+    if (window.parent === window) return;
+
+    const sendHeight = () => {
+      const height = document.documentElement.scrollHeight;
+      window.parent.postMessage(
+        {
+          type: 'sroi-height',
+          height: height,
+        },
+        '*'
+      );
+    };
+
+    // Send height on mount
+    sendHeight();
+
+    // Send height on resize
+    const resizeObserver = new ResizeObserver(sendHeight);
+    resizeObserver.observe(document.body);
+
+    window.addEventListener('resize', sendHeight);
+
+    // Also send height when content changes (e.g., when assumptions sheet opens)
+    const mutationObserver = new MutationObserver(sendHeight);
+    mutationObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+    });
+
+    // Send height when assumptions sheet opens/closes
+    const handleAssumptionsChange = () => {
+      setTimeout(sendHeight, 100); // Small delay to allow animation
+    };
+    handleAssumptionsChange();
+
+    return () => {
+      resizeObserver.disconnect();
+      mutationObserver.disconnect();
+      window.removeEventListener('resize', sendHeight);
+    };
+  }, [assumptionsOpen]);
+
   // Generate human-centered story based on impact
   const story = useMemo(() => {
     const nights = Math.round(impact.nightsOffStreet);
     const counselingFraction =
       (debouncedDonation / context.counselingSession) * 100;
-    const earnings = Math.round(impact.futureEarnings);
+    const socialValue = Math.round(impact.socialValueGenerated);
+    const sroi = impact.sroiRatio.adjusted.toFixed(2);
 
-    return `Your ${formatCurrency(debouncedDonation)} keeps a mother and child safe for ${nights} night${nights !== 1 ? 's' : ''}, funds ${counselingFraction >= 100 ? 'at least one' : `~${counselingFraction.toFixed(0)}% of a`} counseling session, and adds ~${formatCurrency(earnings)} in lifetime earnings potential. Every dollar creates ripples of stability, safety, and hope.`;
+    return `Your ${formatCurrency(debouncedDonation)} keeps a mother and child safe for ${nights} night${nights !== 1 ? 's' : ''}, funds ${counselingFraction >= 100 ? 'at least one' : `~${counselingFraction.toFixed(0)}% of a`} counseling session, and generates ~${formatCurrency(socialValue)} in social value—an adjusted SROI of ${sroi}x. Every dollar creates ripples of stability, safety, and hope.`;
   }, [debouncedDonation, impact, context]);
 
   return (
@@ -80,7 +126,7 @@ function App() {
               >
                 Yesterday's Gone
               </a>
-              . Calculations are illustrative placeholders pending stakeholder review.
+              . Calculations based on Safe Nights SROI Analysis (2024).
             </p>
           </CardContent>
         </Card>
@@ -97,21 +143,21 @@ function App() {
             value={formatNumber(impact.nightsOffStreet, 0)}
             description="Women + children housed safely"
             icon={Bed}
-            tooltip="Calculated as (donation ÷ cost per bed-night) × average household size. Shows total person-nights of safe housing funded."
+            tooltip="Calculated as (donation ÷ cost per person-night) × average household size. Shows total person-nights of safe housing funded."
           />
           <ImpactCard
-            title="Violence Prevented"
-            value={formatDecimal(impact.violencePrevented, 3)}
-            description="Expected incidents avoided"
-            icon={Shield}
-            tooltip="Expected-value estimate. Each week of stable housing + counseling reduces risk by a small probability. Placeholder—update with program data and peer-reviewed methodology."
+            title="Social Value Generated"
+            value={formatCurrency(impact.socialValueGenerated)}
+            description="Based on SROI analysis"
+            icon={DollarSign}
+            tooltip="Social value generated based on person-nights × $72.64 per person-night (balanced calculation: Women Mix 50/50 + Kids Moderate)."
           />
           <ImpactCard
-            title="Future Earnings Added"
-            value={formatCurrency(impact.futureEarnings)}
-            description="Lifetime present value"
+            title="Social Return on Investment"
+            value={`${impact.sroiRatio.adjusted.toFixed(2)}x`}
+            description="Adjusted (multiplicative)"
             icon={TrendingUp}
-            tooltip="Simplified economic mobility model. Each month of stability + coaching increases employment likelihood and wage trajectory. Conservative placeholder requiring longitudinal validation."
+            tooltip={`Social Return on Investment ratio. Raw SROI: ${impact.sroiRatio.raw.toFixed(2)}x. Adjusted SROI accounts for deadweight (25%), attribution (20%), and displacement (5%) using multiplicative method.`}
           />
         </div>
 
@@ -171,9 +217,9 @@ function App() {
                 <AssumptionsTrigger onClick={() => setAssumptionsOpen(true)} />
 
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Violence prevention and economic mobility figures are simplified
-                  expected-value models. Update with longitudinal outcome data and
-                  peer-reviewed methodology before public use.
+                  Calculations are based on the Safe Nights SROI Analysis (2024),
+                  using the balanced calculation scenario (Women Mix 50/50 + Kids Moderate).
+                  All assumptions and sources are documented in the model assumptions.
                 </p>
               </div>
             </CardContent>
@@ -201,36 +247,24 @@ function App() {
                 futures.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2 no-print">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="bg-white text-primary hover:bg-white/90 border-white"
-                  asChild
+                <a
+                  href="https://yesterdaysgone.org/donate/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-11 rounded-md px-8 bg-white text-primary hover:bg-white/90 border border-white"
                 >
-                  <a
-                    href="https://yesterdaysgone.org/donate/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Donate Now
-                    <ExternalLink className="ml-2 h-4 w-4" />
-                  </a>
-                </Button>
-                <Button
-                  size="lg"
-                  variant="ghost"
-                  className="text-primary-foreground border-white/50 hover:bg-white/10 hover:text-primary-foreground print:hidden"
-                  asChild
+                  Donate Now
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </a>
+                <a
+                  href="https://yesterdaysgone.org/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 h-11 rounded-md px-8 hover:bg-white/10 text-primary-foreground border border-white/50 print:hidden"
                 >
-                  <a
-                    href="https://yesterdaysgone.org/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Learn More
-                    <ExternalLink className="ml-2 h-4 w-4" />
-                  </a>
-                </Button>
+                  Learn More
+                  <ExternalLink className="ml-2 h-4 w-4" />
+                </a>
               </div>
             </div>
           </CardContent>
